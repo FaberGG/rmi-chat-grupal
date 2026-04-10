@@ -1,0 +1,6 @@
+co\edu\unicauca\servidor\utilidades\UtilidadesConsola.class
+co\edu\unicauca\servidor\controladores\ControladorServidorChatInt.class
+co\edu\unicauca\servidor\servicios\ServidorDeObjetos.class
+co\edu\unicauca\servidor\utilidades\UtilidadesRegistroS.class
+co\edu\unicauca\cliente\controladores\UsuarioCllbckInt.class
+co\edu\unicauca\servidor\controladores\ControladorServidorChatImpl.class
