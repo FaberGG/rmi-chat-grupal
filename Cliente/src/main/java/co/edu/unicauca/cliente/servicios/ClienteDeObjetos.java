@@ -5,52 +5,77 @@ import java.util.List;
 import co.edu.unicauca.cliente.controladores.UsuarioCllbckImpl;
 import co.edu.unicauca.cliente.utilidades.UtilidadesConsola;
 import co.edu.unicauca.cliente.utilidades.UtilidadesRegistroC;
+import co.edu.unicauca.cliente.utilidades.UtilidadesProperties;
 import co.edu.unicauca.servidor.controladores.ControladorServidorChatInt;
 
+/**
+ * Clase principal del cliente de chat.
+ * Implementa el menú de opciones para interactuar con el servidor de chat RMI.
+ *
+ * Puntos del taller implementados aquí:
+ *   a) Registrar referencia remota con nickName
+ *   b) Validar nickName único (respuesta del servidor)
+ *   c) Ver nickNames de usuarios activos
+ *   d) Salir del chat eliminando la referencia en el servidor
+ *   e) Enviar mensaje directo a un usuario determinado
+ *   h) Consultar cantidad de usuarios activos
+ *   i) IP y puerto del NS leídos desde config.properties
+ */
 public class ClienteDeObjetos
 {
-    private static final int OPCION_ENVIAR_MENSAJE = 1;
-    private static final int OPCION_MOSTRAR_USUARIOS = 2;
-    private static final int OPCION_ENVIAR_MENSAJE_DIRECTO = 3;
-    private static final int OPCION_SALIR = 0;
+    // Constantes para las opciones del menú del cliente
+    private static final int OPCION_ENVIAR_MENSAJE          = 1;
+    private static final int OPCION_MOSTRAR_USUARIOS        = 2;
+    private static final int OPCION_ENVIAR_MENSAJE_DIRECTO  = 3;
+    private static final int OPCION_CANTIDAD_USUARIOS       = 4; // PUNTO h
+    private static final int OPCION_SALIR                   = 0;
 
     public static void main(String[] args)
     {
-
         try
         {
-            ControladorServidorChatInt servidor;
-            int numPuertoRMIRegistry = 8080;
-            String direccionIpRMIRegistry = "localhost";
-            /* 
-            System.out.println("Cual es el la dirección ip donde se encuentra  el rmiregistry ");
-            direccionIpRMIRegistry = UtilidadesConsola.leerCadena();
-            System.out.println("Cual es el número de puerto por el cual escucha el rmiregistry ");
-            numPuertoRMIRegistry = UtilidadesConsola.leerEntero(); 
-*/
-            //mostrar detalles de conexion
-            System.out.println("Intentando conectar con el servidor en la dirección IP: " + direccionIpRMIRegistry + " y puerto: " + numPuertoRMIRegistry);
+            // PUNTO i: Se obtienen la IP y el puerto del NS desde el archivo config.properties
+            // en lugar de estar escritos directamente en el código
+            String direccionIpRMIRegistry = UtilidadesProperties.obtenerPropiedad("ns.ip");
+            int numPuertoRMIRegistry = Integer.parseInt(UtilidadesProperties.obtenerPropiedad("ns.puerto"));
 
-            servidor = (ControladorServidorChatInt) UtilidadesRegistroC.obtenerObjRemoto(numPuertoRMIRegistry,direccionIpRMIRegistry, "ServidorChat");
-            if(servidor == null)
+            // Se muestran los datos de conexión al usuario
+            System.out.println("=== Cliente de Chat RMI ===");
+            System.out.println("Conectando con el servidor en " + direccionIpRMIRegistry + ":" + numPuertoRMIRegistry + "...");
+
+            // Se obtiene la referencia remota del objeto servidor desde el rmiRegistry
+            ControladorServidorChatInt servidor = (ControladorServidorChatInt)
+                UtilidadesRegistroC.obtenerObjRemoto(numPuertoRMIRegistry, direccionIpRMIRegistry, "ServidorChat");
+
+            // Se verifica que se haya podido obtener la referencia remota del servidor
+            if (servidor == null)
             {
-                System.out.println("No se pudo obtener la referencia remota del servidor. Verifique IP, puerto y que el servidor siga en ejecucion.");
+                System.out.println("No se pudo obtener la referencia remota del servidor.");
+                System.out.println("Verifique que el servidor esté en ejecución en " + direccionIpRMIRegistry + ":" + numPuertoRMIRegistry);
                 return;
             }
-            //confirmar conexion
-            System.out.println("Conexión exitosa al servidor en " + direccionIpRMIRegistry + ":" + numPuertoRMIRegistry);
 
-            UsuarioCllbckImpl objNuevoUsuario= new UsuarioCllbckImpl();
-            // se pide el nickname del cliente para registrarlo en el servidor
-            String nickname = UtilidadesConsola.leerCadena("Digite su nickname para registrarse en el chat: ");
+            System.out.println("Conexión exitosa al servidor.");
+
+            // Se crea el objeto callback del cliente (referencia remota que el servidor usará)
+            UsuarioCllbckImpl objNuevoUsuario = new UsuarioCllbckImpl();
+
+            // PUNTO a y b: Se solicita el nickName y se registra en el servidor
+            // El servidor valida que el nickName sea único (retorna false si ya existe)
+            String nickname = UtilidadesConsola.leerCadena("Digite su nickName para registrarse en el chat: ");
             boolean registrado = servidor.registrarReferenciaUsuario(objNuevoUsuario, nickname);
+
             if (!registrado)
             {
-                System.out.println("No se pudo registrar el usuario. El nickname " + nickname + " ya está en uso. Por favor, intente con otro nickname.");
+                // PUNTO b: El servidor rechazó el registro porque el nickName ya está en uso
+                System.out.println("No se pudo registrar: el nickName '" + nickname + "' ya está en uso.");
+                System.out.println("Por favor, reinicie el cliente e intente con otro nickName.");
                 return;
             }
-            System.out.println("Sesion iniciada correctamente para: " + nickname);
 
+            System.out.println("Sesión iniciada correctamente. ¡Bienvenido, " + nickname + "!");
+
+            // Ciclo principal del menú del cliente
             while (true)
             {
                 mostrarMenu();
@@ -59,11 +84,13 @@ public class ClienteDeObjetos
                 switch (opcion)
                 {
                     case OPCION_ENVIAR_MENSAJE:
-                        String mensaje = UtilidadesConsola.leerCadena("Digite el mensaje a enviar al servidor: ");
+                        // Envía un mensaje público a todos los usuarios conectados
+                        String mensaje = UtilidadesConsola.leerCadena("Digite el mensaje a enviar: ");
                         servidor.enviarMensaje(mensaje, nickname);
                         break;
 
                     case OPCION_MOSTRAR_USUARIOS:
+                        // PUNTO c: Muestra la lista de nickNames de usuarios activos
                         List<String> usuariosActivos = servidor.mostrarUsuarios();
                         if (usuariosActivos == null || usuariosActivos.isEmpty())
                         {
@@ -71,47 +98,58 @@ public class ClienteDeObjetos
                         }
                         else
                         {
-                            System.out.println("Usuarios activos:");
+                            System.out.println("Usuarios activos (" + usuariosActivos.size() + "):");
                             for (String usuario : usuariosActivos)
                             {
-                                System.out.println("- " + usuario);
+                                System.out.println("  - " + usuario);
                             }
                         }
                         break;
 
                     case OPCION_ENVIAR_MENSAJE_DIRECTO:
-                        String destinatario = UtilidadesConsola.leerCadena("Digite el nickname del destinatario: ");
-                        String mensajedm = UtilidadesConsola.leerCadena("Digite el mensaje a enviar: ");
-                        servidor.enviarMensajeDirecto(mensajedm, nickname, destinatario);
+                        // PUNTO e: Envía un mensaje privado a un usuario determinado
+                        String destinatario = UtilidadesConsola.leerCadena("Digite el nickName del destinatario: ");
+                        String mensajeDireto = UtilidadesConsola.leerCadena("Digite el mensaje privado: ");
+                        servidor.enviarMensajeDirecto(mensajeDireto, nickname, destinatario);
+                        break;
+
+                    case OPCION_CANTIDAD_USUARIOS:
+                        // PUNTO h: Consulta la cantidad de usuarios activos
+                        int cantidad = servidor.obtenerCantidadUsuariosActivos();
+                        System.out.println("Cantidad de usuarios activos en el chat: " + cantidad);
                         break;
 
                     case OPCION_SALIR:
+                        // PUNTO d: El cliente sale del chat y elimina su referencia en el servidor
                         servidor.cerrarConexion(nickname);
-                        System.out.println("Sesion finalizada por el cliente.");
-                        return;
+                        System.out.println("Sesión finalizada. ¡Hasta luego, " + nickname + "!");
+                        return; // Termina el programa
 
                     default:
-                        System.out.println("Opcion invalida. Intente nuevamente.");
+                        System.out.println("Opción inválida. Intente nuevamente.");
                         break;
                 }
             }
-
         }
-        catch(Exception e)
+        catch (Exception e)
         {
-                System.out.println("No se pudo realizar la conexion...");
-                System.out.println(e.getMessage());
+            System.out.println("Error de conexión con el servidor: " + e.getMessage());
+            e.printStackTrace();
         }
-
     }
 
+    /**
+     * Muestra el menú de opciones disponibles para el cliente.
+     */
     private static void mostrarMenu()
     {
-        System.out.println("\n----- MENU CLIENTE CHAT -----");
-        System.out.println("1. Enviar mensaje");
-        System.out.println("2. Mostrar usuarios activos");
-        System.out.println("3. Enviar mensaje directo");
-        System.out.println("0. Salir");
+        System.out.println("\n----- MENÚ CLIENTE CHAT -----");
+        System.out.println("1. Enviar mensaje público");
+        System.out.println("2. Ver usuarios activos");           // PUNTO c
+        System.out.println("3. Enviar mensaje privado");         // PUNTO e
+        System.out.println("4. Ver cantidad de usuarios activos"); // PUNTO h
+        System.out.println("0. Salir del chat");                 // PUNTO d
+        System.out.println("-----------------------------");
     }
-	
 }
+
