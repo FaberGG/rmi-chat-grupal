@@ -1,2 +1,6 @@
 target/ 
 *.class 
+Cliente/target/
+Cliente/*.class
+Servidor/target/
+Servidor/*.class
