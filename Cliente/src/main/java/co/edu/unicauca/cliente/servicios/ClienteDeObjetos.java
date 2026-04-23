@@ -4,8 +4,8 @@ import java.util.List;
 
 import co.edu.unicauca.cliente.controladores.UsuarioCllbckImpl;
 import co.edu.unicauca.cliente.utilidades.UtilidadesConsola;
-import co.edu.unicauca.cliente.utilidades.UtilidadesRegistroC;
 import co.edu.unicauca.cliente.utilidades.UtilidadesProperties;
+import co.edu.unicauca.cliente.utilidades.UtilidadesRegistroC;
 import co.edu.unicauca.servidor.controladores.ControladorServidorChatInt;
 
 /**
@@ -27,7 +27,7 @@ public class ClienteDeObjetos
     private static final int OPCION_ENVIAR_MENSAJE          = 1;
     private static final int OPCION_MOSTRAR_USUARIOS        = 2;
     private static final int OPCION_ENVIAR_MENSAJE_DIRECTO  = 3;
-    private static final int OPCION_CANTIDAD_USUARIOS       = 4; // PUNTO h
+    private static final int OPCION_CANTIDAD_USUARIOS       = 4; 
     private static final int OPCION_SALIR                   = 0;
 
     public static void main(String[] args)

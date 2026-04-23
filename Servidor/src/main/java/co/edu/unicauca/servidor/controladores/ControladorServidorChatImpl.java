@@ -3,10 +3,10 @@ package co.edu.unicauca.servidor.controladores;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 import co.edu.unicauca.cliente.controladores.UsuarioCllbckInt;
 
@@ -60,6 +60,29 @@ public class ControladorServidorChatImpl extends UnicastRemoteObject implements 
         // PUNTO b: Se verifica que el nickName no esté ya registrado en el mapa
         if (usuarios.containsKey(nickname))
         {
+            // se verifica que el usuario registrado con ese nickName siga conectado, si terminó abruptamente se elimina su referencia del mapa y se permite el registro del nuevo usuario con ese nickName
+            UsuarioCllbckInt usuarioRegistrado = usuarios.get(nickname);
+            try
+            {
+                // Se intenta hacer el callback al usuario registrado para verificar su conexión
+                usuarioRegistrado.notificar("Verificando conexión...", usuarios.size(), "Servidor");
+            }
+            catch (RemoteException e)
+            {
+                // El usuario registrado con ese nickName terminó abruptamente, se elimina su referencia del mapa y se permite el registro del nuevo usuario con ese nickName
+                System.out.println("El usuario '" + nickname + "' registrado previamente terminó abruptamente. Eliminando referencia remota.");
+                usuarios.remove(nickname); // Elimina la referencia del usuario que terminó abruptamente
+                // Se continúa con el registro del nuevo usuario con ese nickName
+
+                usuarios.put(nickname, usuario);
+                System.out.println("Usuario registrado exitosamente: " + nickname);
+                System.out.println("Total de usuarios activos: " + usuarios.size());
+
+                // Se notifica a todos los usuarios que alguien nuevo se unió
+                notificarUsuarios("El usuario '" + nickname + "' se ha unido al chat.", "Servidor");
+
+                return true;
+            }
             // El nickName ya existe, se informa y se retorna false
             System.out.println("El nickName '" + nickname + "' ya está en uso. Registro rechazado.");
             return false;
@@ -126,6 +149,8 @@ public class ControladorServidorChatImpl extends UnicastRemoteObject implements 
                 // Se elimina su referencia remota del mapa para limpiar el servidor
                 System.out.println("El usuario '" + nickUsuario + "' terminó abruptamente. Eliminando referencia remota.");
                 iterador.remove(); // Elimina el usuario del mapa de forma segura
+                // se notifica a los demás usuarios que alguien se desconectó (opcional, pero útil para mantener la lista actualizada)
+                notificarUsuarios("El usuario '" + nickUsuario + "' ha salido del chat.", "Servidor");
             }
         }
     }
@@ -138,6 +163,28 @@ public class ControladorServidorChatImpl extends UnicastRemoteObject implements 
     @Override
     public List<String> mostrarUsuarios() throws RemoteException
     {
+        // se verifica que cada usuario siga conectado antes de retornar la lista, si alguno terminó abruptamente se elimina su referencia del mapa
+        Iterator<Map.Entry<String, UsuarioCllbckInt>> iterador = usuarios.entrySet().iterator();
+        while (iterador.hasNext())
+        {
+            Map.Entry<String, UsuarioCllbckInt> entrada = iterador.next();
+            String nickUsuario = entrada.getKey();
+            UsuarioCllbckInt objUsuario = entrada.getValue();
+
+            try
+            {
+                // Se intenta hacer el callback al usuario para verificar su conexión
+                objUsuario.notificar("Verificando conexión...", usuarios.size(), "Servidor");
+            }
+            catch (RemoteException e)
+            {
+                // El usuario terminó abruptamente, se elimina su referencia del mapa
+                System.out.println("El usuario '" + nickUsuario + "' terminó abruptamente durante la verificación. Eliminando referencia remota.");
+                iterador.remove(); // Elimina el usuario del mapa de forma segura
+                // se notifica a los demás usuarios que alguien se desconectó (opcional, pero útil para mantener la lista actualizada)
+                notificarUsuarios("El usuario '" + nickUsuario + "' ha salido del chat.", "Servidor");
+            }
+        }
         // Se crea una nueva lista con los nickNames del mapa
         List<String> listaUsuarios = new ArrayList<>(usuarios.keySet());
         System.out.println("Listando " + listaUsuarios.size() + " usuario(s) activo(s).");
@@ -260,6 +307,28 @@ public class ControladorServidorChatImpl extends UnicastRemoteObject implements 
     @Override
     public int obtenerCantidadUsuariosActivos() throws RemoteException
     {
+        //se verifica la conexion para cada uno de los usuarios activos, si alguno terminó abruptamente se elimina su referencia del mapa
+        Iterator<Map.Entry<String, UsuarioCllbckInt>> iterador = usuarios.entrySet().iterator();
+        while (iterador.hasNext())
+        {
+            Map.Entry<String, UsuarioCllbckInt> entrada = iterador.next();
+            String nickUsuario = entrada.getKey();
+            UsuarioCllbckInt objUsuario = entrada.getValue();
+
+            try
+            {
+                // Se intenta hacer el callback al usuario para verificar su conexión
+                objUsuario.notificar("Verificando conexión...", usuarios.size(), "Servidor");
+            }
+            catch (RemoteException e)
+            {
+                // El usuario terminó abruptamente, se elimina su referencia del mapa
+                System.out.println("El usuario '" + nickUsuario + "' terminó abruptamente durante la verificación. Eliminando referencia remota.");
+                iterador.remove(); // Elimina el usuario del mapa de forma segura
+                // se notifica a los demás usuarios que alguien se desconectó (opcional, pero útil para mantener la lista actualizada)
+                notificarUsuarios("El usuario '" + nickUsuario + "' ha salido del chat.", "Servidor");
+            }
+        }
         int cantidad = usuarios.size();
         System.out.println("Consulta de usuarios activos: " + cantidad);
         return cantidad;
